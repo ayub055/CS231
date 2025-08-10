@@ -30,19 +30,16 @@ def softmax_loss_naive(W, X, y, reg):
     num_classes = W.shape[1]
     num_train = X.shape[0]
     for i in range(num_train):
-        scores = X[i].dot(W)
-
-        # compute the probabilities in numerically stable way
-        scores -= np.max(scores)
-        p = np.exp(scores)
-        p /= p.sum()  # normalize
-        logp = np.log(p)
-
-        loss -= logp[y[i]]  # negative log probability is the loss
-
+        y_hat = X[i] @ W  
+        y_exp = np.exp(y_hat-np.max(y_hat))
+        softmax = y_exp/np.sum(y_exp)
+        loss = loss - np.log(softmax[y[i]])
+        softmax[y[i]] -= 1  # subtract 1 from the correct class
+        dW += np.outer(X[i], softmax)
 
     # normalized hinge loss plus regularization
     loss = loss / num_train + reg * np.sum(W * W)
+    dW = dW / num_train + 2 * reg * W  
 
     #############################################################################
     # TODO:                                                                     #
@@ -55,8 +52,6 @@ def softmax_loss_naive(W, X, y, reg):
 
 
     return loss, dW
-
-
 def softmax_loss_vectorized(W, X, y, reg):
     """
     Softmax loss function, vectorized version.
@@ -67,23 +62,26 @@ def softmax_loss_vectorized(W, X, y, reg):
     loss = 0.0
     dW = np.zeros_like(W)
 
-
     #############################################################################
-    # TODO:                                                                     #
-    # Implement a vectorized version of the softmax loss, storing the           #
-    # result in loss.                                                           #
+    # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
+    # Store the loss in loss and the gradient in dW. If you are not careful     #
+    # here, it is easy to run into numeric instability. Don't forget the        #
+    # regularization!                                                           #
     #############################################################################
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+    N = X.shape[0] # number of samples
+    Y_hat = X @ W  # raw scores matrix
 
-    #############################################################################
-    # TODO:                                                                     #
-    # Implement a vectorized version of the gradient for the softmax            #
-    # loss, storing the result in dW.                                           #
-    #                                                                           #
-    # Hint: Instead of computing the gradient from scratch, it may be easier    #
-    # to reuse some of the intermediate values that you used to compute the     #
-    # loss.                                                                     #
-    #############################################################################
+    P = np.exp(Y_hat - Y_hat.max())      # numerically stable exponents
+    P /= P.sum(axis=1, keepdims=True)    # row-wise probabilities (softmax)
 
+    loss = -np.log(P[range(N), y]).sum() # sum cross entropies as loss
+    loss = loss / N + reg * np.sum(W**2) # average loss and regularize 
+
+    P[range(N), y] -= 1                  # update P for gradient
+    dW = X.T @ P / N + 2 * reg * W       # calculate gradient
+
+    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
