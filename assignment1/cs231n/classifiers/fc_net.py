@@ -45,6 +45,16 @@ class TwoLayerNet(object):
         self.params = {}
         self.reg = reg
 
+        self.W1 = np.random.normal(0.0, weight_scale, (input_dim, hidden_dim))
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = np.random.normal(0.0, weight_scale, (hidden_dim, num_classes))
+        self.b2 = np.zeros(num_classes)
+
+        self.params["W1"] = self.W1
+        self.params["b1"] = self.b1
+        self.params["W2"] = self.W2
+        self.params["b2"] = self.b2
+
         ############################################################################
         # TODO: Initialize the weights and biases of the two-layer net. Weights    #
         # should be initialized from a Gaussian centered at 0.0 with               #
@@ -83,7 +93,10 @@ class TwoLayerNet(object):
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
-
+        l1, c1 = affine_forward(X, self.params["W1"], self.params["b1"])
+        a1, c2 = relu_forward(l1)
+        scores, c3 = affine_forward(a1, self.params["W2"], self.params["b2"])
+    
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -93,6 +106,15 @@ class TwoLayerNet(object):
             return scores
 
         loss, grads = 0, {}
+        loss, dloss = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * (self.params["W1"]**2).sum() + (self.params["W2"]**2).sum()
+
+        grads["W2"], grads["b2"], _ = affine_backward(dloss, c3)
+        da1 = relu_backward(grads["W2"], c2)
+        grads["W1"], grads["b1"], _ = affine_backward(da1, c2)
+        grads["W1"] += self.reg * self.params["W1"]
+        grads["W2"] += self.reg * self.params["W2"]
+
         ############################################################################
         # TODO: Implement the backward pass for the two-layer net. Store the loss  #
         # in the loss variable and gradients in the grads dictionary. Compute data #
